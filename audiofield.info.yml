@@ -1,0 +1,11 @@
+name: AudioField
+description: "Adds audio widget for uploading and playing audio files."
+type: module
+package: Field types
+core_version_requirement: ^9 || ^10 || ^11
+
+# Custom fork with Drupal 11 compatibility patches
+# Original module: drupal/audiofield 8.x-1.13
+# Patches applied:
+# - LibraryDiscovery → LibraryDiscoveryInterface for D11 compatibility
+version: '1.13-custom'
