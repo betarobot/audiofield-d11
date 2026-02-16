@@ -42,8 +42,7 @@ index original..modified 100644
     */
    $path = \Drupal::service('extension.list.module')->getPath('audiofield');
 -  $audioplayer_templates = drupal_find_theme_templates($theme_registry, '.html.twig', $path);
-+  $theme_registry_service = \Drupal::service('theme.registry');
-+  $audioplayer_templates = $theme_registry_service->findThemeTemplates($theme_registry, '.html.twig', $path);
++  $audioplayer_templates = drupal_find_theme_templates($theme_registry, '.html.twig', $path);
    foreach ($audioplayer_templates as &$audioplayer_template) {
      $audioplayer_template['type'] = 'module';
    }
