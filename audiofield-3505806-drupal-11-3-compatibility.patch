@@ -1,0 +1,129 @@
+diff --git a/audiofield.install b/audiofield.install
+index original..modified 100644
+--- a/audiofield.install
++++ b/audiofield.install
+@@ -9,9 +9,9 @@ use Drupal\Core\Link;
+ use Drupal\Core\Url;
+ 
+ /**
+- * Implements hook_requirements().
++ * Implements hook_runtime_requirements().
+  */
+-function audiofield_requirements($phase) {
++function audiofield_runtime_requirements() {
+   $requirements = [];
+ 
+-  if ($phase == 'runtime') {
+     $requirements['audiofield'] = [
+@@ -66,7 +66,7 @@ function audiofield_requirements($phase) {
+           }
+           catch (Exception $e) {
+             $requirements['audiofield']['description']['uninstalled']['#items'][] = t(':library_name library has not been installed. Download and install in %library', [
+-              ':library_name' => $pluginInstance->getPluginTitFle(),
++              ':library_name' => $pluginInstance->getPluginTitle(),
+               '%library' => $pluginInstance->getPluginLibraryPath(),
+             ]);
+           }
+@@ -107,7 +107,6 @@ function audiofield_requirements($phase) {
+       $requirements['audiowaveform']['severity'] = REQUIREMENT_OK;
+     }
+   }
+-  }
+ 
+   return $requirements;
+ }
+
+diff --git a/audiofield.module b/audiofield.module
+index original..modified 100644
+--- a/audiofield.module
++++ b/audiofield.module
+@@ -99,7 +99,8 @@ function audiofield_theme_registry_alter(&$theme_registry) {
+    * module in which they were created, so we must add them manually here.
+    */
+   $path = \Drupal::service('extension.list.module')->getPath('audiofield');
+-  $audioplayer_templates = drupal_find_theme_templates($theme_registry, '.html.twig', $path);
++  $theme_registry_service = \Drupal::service('theme.registry');
++  $audioplayer_templates = $theme_registry_service->findThemeTemplates($theme_registry, '.html.twig', $path);
+   foreach ($audioplayer_templates as &$audioplayer_template) {
+     $audioplayer_template['type'] = 'module';
+   }
+
+diff --git a/src/AudioFieldPluginBase.php b/src/AudioFieldPluginBase.php
+index original..modified 100644
+--- a/src/AudioFieldPluginBase.php
++++ b/src/AudioFieldPluginBase.php
+@@ -64,9 +64,16 @@ abstract class AudioFieldPluginBase extends PluginBase implements ContainerFact
+   protected $fileUrlGenerator;
+ 
+   /**
++   * File validator service.
++   *
++   * @var Drupal\Core\File\FileValidatorInterface
++   */
++  protected $fileValidator;
++
++  /**
+    * {@inheritdoc}
+    */
+-  public function __construct(array $configuration, $plugin_id, $plugin_definition, LibraryDiscoveryInterface $library_discovery, MessengerInterface $messenger, LoggerChannelFactoryInterface $logger_factory, FileSystemInterface $file_system, FileUrlGenerator $file_url_generator)
++  public function __construct(array $configuration, $plugin_id, $plugin_definition, LibraryDiscoveryInterface $library_discovery, MessengerInterface $messenger, LoggerChannelFactoryInterface $logger_factory, FileSystemInterface $file_system, FileUrlGenerator $file_url_generator, $file_validator = NULL)
+   {
+     parent::__construct($configuration, $plugin_id, $plugin_definition);
+ 
+@@ -74,6 +81,7 @@ abstract class AudioFieldPluginBase extends PluginBase implements ContainerFact
+     $this->loggerFactory = $logger_factory;
+     $this->fileSystem = $file_system;
+     $this->fileUrlGenerator = $file_url_generator;
++    $this->fileValidator = $file_validator ?: \Drupal::service('file.validator');
+   }
+ 
+   /**
+@@ -88,7 +96,8 @@ abstract class AudioFieldPluginBase extends PluginBase implements ContainerFact
+       $container->get('messenger'),
+       $container->get('logger.factory'),
+       $container->get('file_system'),
+-      $container->get('file_url_generator')
++      $container->get('file_url_generator'),
++      $container->get('file.validator')
+     );
+   }
+ 
+@@ -291,8 +300,10 @@ abstract class AudioFieldPluginBase extends PluginBase implements ContainerFact
+    */
+   private function validateFileAgainstPlayer(FileInterface $file)
+   {
+-    // Validate the file extension agains the list of valid extensions.
+-    $errors = file_validate_extensions($file, implode(' ', $this->pluginDefinition["fileTypes"]));
++    // Validate the file extension against the list of valid extensions.
++    $errors = $this->fileValidator->validate($file, [
++      'FileExtension' => ['extensions' => implode(' ', $this->pluginDefinition["fileTypes"])],
++    ]);
+     if (count($errors) > 0) {
+       $message_data = [
+         '%filename' => $file->getFilename(),
+
+diff --git a/src/Plugin/AudioPlayer/WavesurferAudioPlayer.php b/src/Plugin/AudioPlayer/WavesurferAudioPlayer.php
+index original..modified 100644
+--- a/src/Plugin/AudioPlayer/WavesurferAudioPlayer.php
++++ b/src/Plugin/AudioPlayer/WavesurferAudioPlayer.php
+@@ -42,9 +42,9 @@ class WavesurferAudioPlayer extends AudioFieldPluginBase
+   /**
+    * {@inheritdoc}
+    */
+-  public function __construct(array $configuration, $plugin_id, $plugin_definition, LibraryDiscoveryInterface $library_discovery, MessengerInterface $messenger, LoggerChannelFactoryInterface $logger_factory, FileSystemInterface $file_system, ModuleHandlerInterface $module_handler, FileUrlGenerator $file_url_generator)
++  public function __construct(array $configuration, $plugin_id, $plugin_definition, LibraryDiscoveryInterface $library_discovery, MessengerInterface $messenger, LoggerChannelFactoryInterface $logger_factory, FileSystemInterface $file_system, ModuleHandlerInterface $module_handler, FileUrlGenerator $file_url_generator, $file_validator = NULL)
+   {
+-    parent::__construct($configuration, $plugin_id, $plugin_definition, $library_discovery, $messenger, $logger_factory, $file_system, $file_url_generator);
++    parent::__construct($configuration, $plugin_id, $plugin_definition, $library_discovery, $messenger, $logger_factory, $file_system, $file_url_generator, $file_validator);
+ 
+     $this->moduleHandler = $module_handler;
+   }
+@@ -62,7 +62,8 @@ class WavesurferAudioPlayer extends AudioFieldPluginBase
+       $container->get('logger.factory'),
+       $container->get('file_system'),
+       $container->get('module_handler'),
+-      $container->get('file_url_generator')
++      $container->get('file_url_generator'),
++      $container->get('file.validator')
+     );
+   }
