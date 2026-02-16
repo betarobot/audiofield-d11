@@ -8,13 +8,15 @@
 - ✅ Drupal 10.x  
 - ✅ Drupal 11.x (including 11.3)
 
-### What's Fixed for D11
+### What's Fixed for D11.3
 
 - ✅ Replaced deprecated `file_validate_extensions()` with `file.validator` service
-- ✅ Replaced deprecated `drupal_find_theme_templates()` with `theme.registry` service
 - ✅ Migrated `hook_requirements()` to `hook_runtime_requirements()`
 - ✅ Updated WavesurferAudioPlayer constructor for D11 compatibility
-- ✅ Fixed typo bug in error handling
+- ✅ Fixed parse error in install file (extra closing brace)
+- ✅ Fixed typo bug in error handling (`getPluginTitFle` → `getPluginTitle`)
+
+**Patch File**: `audiofield-3505806-drupal-11-3-compatibility.patch`
 
 **Original Module**: [drupal/audiofield](https://www.drupal.org/project/audiofield) version 8.x-1.13
 
